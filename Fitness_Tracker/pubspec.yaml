@@ -1,0 +1,44 @@
+name: fittrack
+description: FitTrack – Kinetic Sanctuary Fitness Tracker (CodeAlpha Task 3)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Firebase ─────────────────────────────────────────────────────────────────
+  firebase_core: ^3.3.0
+  firebase_auth: ^5.1.4
+  cloud_firestore: ^5.2.1
+  firebase_storage: ^12.1.2
+
+  # ── Fonts (Google Fonts for Plus Jakarta Sans, Inter, Lexend) ─────────────────
+  google_fonts: ^6.2.1
+
+  # ── Utilities ─────────────────────────────────────────────────────────────────
+  uuid: ^4.4.2                # For generating unique IDs
+  intl: ^0.19.0               # Date formatting
+  shared_preferences: ^2.3.2  # Local storage for settings/theme
+  image_picker: ^1.1.2        # Profile photo upload
+
+  # ── UI extras ─────────────────────────────────────────────────────────────────
+  flutter_svg: ^2.0.10        # SVG icon support
+  percent_indicator: ^4.2.3   # Alternative progress indicators
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  # Add your asset folders here if needed:
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
