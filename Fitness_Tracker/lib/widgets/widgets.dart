@@ -114,7 +114,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ─── Progress Ring ─────────────────────────────────────────────────────────────
 class ProgressRing extends StatelessWidget {
-  final double progress;     // 0.0 – 1.0
+  final double progress; // 0.0 – 1.0
   final double size;
   final double strokeWidth;
   final Widget? child;
@@ -325,7 +325,8 @@ class WorkoutTile extends StatelessWidget {
                 gradient: AppColors.kineticGradient,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.fitness_center, color: AppColors.onPrimary, size: 26),
+              child: const Icon(Icons.fitness_center,
+                  color: AppColors.onPrimary, size: 26),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -483,7 +484,8 @@ class WeeklyBarChart extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(values.length, (i) {
         final isSelected = i == selectedIndex;
-        final ratio = maxValue > 0 ? (values[i] / maxValue).clamp(0.0, 1.0) : 0.0;
+        final ratio =
+            maxValue > 0 ? (values[i] / maxValue).clamp(0.0, 1.0) : 0.0;
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -504,12 +506,8 @@ class WeeklyBarChart extends StatelessWidget {
               width: 28,
               height: 80 * ratio + 8,
               decoration: BoxDecoration(
-                gradient: isSelected
-                    ? AppColors.kineticGradient
-                    : null,
-                color: isSelected
-                    ? null
-                    : AppColors.surfaceContainerHighest,
+                gradient: isSelected ? AppColors.kineticGradient : null,
+                color: isSelected ? null : AppColors.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
@@ -520,9 +518,8 @@ class WeeklyBarChart extends StatelessWidget {
                 fontFamily: 'Lexend',
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? AppColors.onSurface
-                    : AppColors.outlineVariant,
+                color:
+                    isSelected ? AppColors.onSurface : AppColors.outlineVariant,
                 letterSpacing: 0.5,
               ),
             ),
@@ -533,3 +530,243 @@ class WeeklyBarChart extends StatelessWidget {
   }
 }
 
+// ─── App Navigation Drawer ─────────────────────────────────────────────────────
+class AppNavigationDrawer extends StatelessWidget {
+  final String userName;
+  final String userEmail;
+  final String? avatarUrl;
+  final VoidCallback onHome;
+  final VoidCallback onHistory;
+  final VoidCallback onLogWorkout;
+  final VoidCallback onProgress;
+  final VoidCallback onProfile;
+  final VoidCallback onResetPassword;
+  final VoidCallback onSignOut;
+
+  const AppNavigationDrawer({
+    super.key,
+    required this.userName,
+    required this.userEmail,
+    this.avatarUrl,
+    required this.onHome,
+    required this.onHistory,
+    required this.onLogWorkout,
+    required this.onProgress,
+    required this.onProfile,
+    required this.onResetPassword,
+    required this.onSignOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: AppColors.surface,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // ── Header with user info ──
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.kineticGradient,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: avatarUrl == null || avatarUrl!.isEmpty
+                        ? Center(
+                            child: Text(
+                              userName.isNotEmpty
+                                  ? userName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.onPrimary,
+                              ),
+                            ),
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, error, stackTrace) {
+                                // Silently handle Firebase Storage errors
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.kineticGradient,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      userName.isNotEmpty
+                                          ? userName[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    userName,
+                    style: const TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  Text(
+                    userEmail,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // ── Menu items ──
+            Expanded(
+              child: ListView(
+                children: [
+                  _DrawerItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onHome();
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.history_rounded,
+                    label: 'History',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onHistory();
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.add_circle_rounded,
+                    label: 'Log Workout',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onLogWorkout();
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.show_chart_rounded,
+                    label: 'Progress',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onProgress();
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.person_rounded,
+                    label: 'Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onProfile();
+                    },
+                  ),
+                  const Divider(height: 16),
+                  _DrawerItem(
+                    icon: Icons.lock_rounded,
+                    label: 'Reset Password',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onResetPassword();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // ── Sign Out Button ──
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  onSignOut();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorContainer.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.error.withOpacity(0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.logout_rounded,
+                          color: AppColors.error, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontFamily: 'Plus Jakarta Sans',
+          fontWeight: FontWeight.w600,
+          color: AppColors.onSurface,
+        ),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+}

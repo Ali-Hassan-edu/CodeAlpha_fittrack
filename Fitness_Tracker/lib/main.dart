@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'firebase_options.dart'; // Removed for manual setup
 import 'theme/app_theme.dart';
-import 'services/firebase_service.dart';
 import 'models/models.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_shell.dart';
+import 'screens/profile_setup_screen.dart';
+import 'services/firebase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +28,7 @@ class FitTrackApp extends StatelessWidget {
   }
 }
 
-// ─── Auth Gate — routes user based on sign-in state ───────────────────────────
+// ─── Auth Gate ─────────────────────────────────────────────────────────────────
 class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
@@ -40,34 +40,43 @@ class _AuthGate extends StatelessWidget {
         if (snap.connectionState == ConnectionState.waiting) {
           return const _SplashScreen();
         }
-
         if (snap.data == null) {
-          // Not signed in → show welcome/onboarding
           return const WelcomeScreen();
         }
+        // User signed in — load their Firestore profile
+        return _ProfileLoader(firebaseUser: snap.data!);
+      },
+    );
+  }
+}
 
-        // Signed in → check if profile exists
-        final uid = snap.data!.uid;
-        return FutureBuilder<UserProfile?>(
-          future: FirestoreService().getUserProfile(uid),
-          builder: (ctx, profileSnap) {
-            if (profileSnap.connectionState == ConnectionState.waiting) {
-              return const _SplashScreen();
-            }
-            final profile = profileSnap.data;
-            if (profile == null) {
-              // New user → profile setup
-              final user = snap.data!;
-              return ProfileSetupScreen(
-                uid: uid,
-                name: user.displayName ?? 'Athlete',
-                email: user.email ?? '',
-              );
-            }
-            // Returning user → home
-            return HomeShell(user: profile);
-          },
-        );
+// ─── Profile Loader — loads real profile or sends to setup ────────────────────
+class _ProfileLoader extends StatelessWidget {
+  final User firebaseUser;
+  const _ProfileLoader({required this.firebaseUser});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<UserProfile?>(
+      stream: FirestoreService().userProfileStream(firebaseUser.uid),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const _SplashScreen();
+        }
+
+        final profile = snap.data;
+
+        // No profile in Firestore → send to setup
+        if (profile == null) {
+          return ProfileSetupScreen(
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName ?? '',
+            email: firebaseUser.email ?? '',
+          );
+        }
+
+        // Profile exists → go to home
+        return HomeShell(user: profile);
       },
     );
   }
@@ -98,7 +107,11 @@ class _SplashScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.bolt_rounded, color: AppColors.onPrimary, size: 44),
+              child: const Icon(
+                Icons.bolt_rounded,
+                color: AppColors.onPrimary,
+                size: 44,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -112,7 +125,10 @@ class _SplashScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            const CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+            const CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
           ],
         ),
       ),

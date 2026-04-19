@@ -16,7 +16,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _filterType = 'All';
   String _searchQuery = '';
 
-  static const _filters = ['All', 'Cardio', 'Strength', 'Cycling', 'Yoga', 'HIIT'];
+  static const _filters = [
+    'All',
+    'Cardio',
+    'Strength',
+    'Cycling',
+    'Yoga',
+    'HIIT'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +31,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface.withOpacity(0.85),
-        title: const Text('Log & History', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700)),
+        title: const Text('Log & History',
+            style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
@@ -35,18 +44,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search workouts...',
-                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.onSurfaceVariant),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    color: AppColors.onSurfaceVariant),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(100),
+                    borderSide: BorderSide.none),
               ),
             ),
           ),
-          // Filter chips
+          // Filter chips - responsive
           const SizedBox(height: 12),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
               children: _filters.map((f) {
                 final isSelected = _filterType == f;
                 return GestureDetector(
@@ -54,9 +65,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.secondary : AppColors.secondaryFixed,
+                      color: isSelected
+                          ? AppColors.secondary
+                          : AppColors.secondaryFixed,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -65,7 +79,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         fontFamily: 'Lexend',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? AppColors.onSecondary : AppColors.onSurfaceVariant,
+                        color: isSelected
+                            ? AppColors.onSecondary
+                            : AppColors.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -79,13 +95,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: StreamBuilder<List<WorkoutLog>>(
               stream: _service.workoutsStream(limit: 50),
               builder: (context, snap) {
+                // Silently ignore errors - show empty state
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                  return const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary));
                 }
                 var workouts = snap.data ?? [];
                 // Filter by type
                 if (_filterType != 'All') {
-                  workouts = workouts.where((w) => w.exerciseType == _filterType).toList();
+                  workouts = workouts
+                      .where((w) => w.exerciseType == _filterType)
+                      .toList();
                 }
                 // Filter by search
                 if (_searchQuery.isNotEmpty) {
@@ -103,9 +124,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       children: [
                         Text('🏋️', style: TextStyle(fontSize: 48)),
                         SizedBox(height: 16),
-                        Text('No workouts found', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.onSurface)),
+                        Text('No workouts found',
+                            style: TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onSurface)),
                         SizedBox(height: 8),
-                        Text('Log your first session!', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.onSurfaceVariant)),
+                        Text('Log your first session!',
+                            style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: AppColors.onSurfaceVariant)),
                       ],
                     ),
                   );
@@ -119,7 +149,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 }
 
                 return ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                   children: grouped.entries.map((entry) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +158,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
                             entry.key,
-                            style: const TextStyle(fontFamily: 'Lexend', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.outline, letterSpacing: 1.2),
+                            style: const TextStyle(
+                                fontFamily: 'Lexend',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.outline,
+                                letterSpacing: 1.2),
                           ),
                         ),
                         ...entry.value.map((w) => WorkoutTile(
@@ -136,7 +171,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               exerciseType: w.exerciseType,
                               durationMinutes: w.durationMinutes,
                               caloriesBurned: w.caloriesBurned,
-                              intensity: WorkoutIntensityBadge.fromLevel(w.intensity.name),
+                              intensity: WorkoutIntensityBadge.fromLevel(
+                                  w.intensity.name),
                               onDelete: () => _confirmDelete(context, w.id),
                             )),
                       ],
@@ -153,12 +189,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _dateLabel(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'TODAY';
-    if (date.year == now.year && date.month == now.month && date.day == now.day - 1) return 'YESTERDAY';
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
+      return 'TODAY';
+    }
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day - 1) {
+      return 'YESTERDAY';
+    }
     return '${_month(date.month)} ${date.day}, ${date.year}'.toUpperCase();
   }
 
-  String _month(int m) => const ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][m];
+  String _month(int m) => const [
+        '',
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC'
+      ][m];
 
   void _confirmDelete(BuildContext context, String id) {
     showDialog(
@@ -166,13 +224,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceContainerLowest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Workout?', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700, color: AppColors.onSurface)),
-        content: const Text('This will permanently remove this entry.', style: TextStyle(fontFamily: 'Inter', color: AppColors.onSurfaceVariant)),
+        title: const Text('Delete Workout?',
+            style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: FontWeight.w700,
+                color: AppColors.onSurface)),
+        content: const Text('This will permanently remove this entry.',
+            style: TextStyle(
+                fontFamily: 'Inter', color: AppColors.onSurfaceVariant)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
-            onPressed: () { _service.deleteWorkoutLog(id); Navigator.pop(context); },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              _service.deleteWorkoutLog(id);
+              Navigator.pop(context);
+            },
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

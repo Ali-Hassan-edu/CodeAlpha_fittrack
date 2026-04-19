@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
 import '../models/models.dart';
 
 // ─── Auth Service ──────────────────────────────────────────────────────────────
 class AuthService {
   final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
+  final _googleSignIn = GoogleSignIn();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -29,7 +30,25 @@ class AuthService {
     return cred;
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Signs in with Google. Returns the credential.
+  /// The caller (auth gate → _ProfileLoader) will detect no profile and
+  /// redirect to ProfileSetupScreen automatically.
+  Future<UserCredential> signInWithGoogle() async {
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) throw Exception('Google sign-in cancelled');
+
+    final googleAuth = await googleUser.authentication;
+    final cred = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    return _auth.signInWithCredential(cred);
+  }
+
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+  }
 
   Future<void> sendPasswordReset(String email) =>
       _auth.sendPasswordResetEmail(email: email);
@@ -68,7 +87,7 @@ class FirestoreService {
 
   // ── Workout Logs ──────────────────────────────────────────────────────────────
   Future<void> addWorkoutLog(WorkoutLog log) async {
-    final ref = await _db
+    await _db
         .collection('users')
         .doc(_uid)
         .collection('workouts')
@@ -85,13 +104,12 @@ class FirestoreService {
           .doc(logId)
           .update(fields);
 
-  Future<void> deleteWorkoutLog(String logId) =>
-      _db
-          .collection('users')
-          .doc(_uid)
-          .collection('workouts')
-          .doc(logId)
-          .delete();
+  Future<void> deleteWorkoutLog(String logId) => _db
+      .collection('users')
+      .doc(_uid)
+      .collection('workouts')
+      .doc(logId)
+      .delete();
 
   Stream<List<WorkoutLog>> workoutsStream({int limit = 30}) => _db
       .collection('users')
@@ -116,19 +134,24 @@ class FirestoreService {
         .map((s) => s.docs.map(WorkoutLog.fromFirestore).toList());
   }
 
-  // ── Daily Summary ─────────────────────────────────────────────────────────────
+  // ── Daily Summary — stored as subcollection under user ───────────────────────
+  // FIXED: moved from top-level 'daily_summaries' to users/{uid}/daily_summaries
+  // This avoids cross-user permission issues entirely.
   String _summaryId(DateTime date) =>
-      '${_uid}_${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   Future<void> _upsertDailySummary(WorkoutLog log) async {
     final id = _summaryId(log.loggedAt);
-    final ref = _db.collection('daily_summaries').doc(id);
+    final ref = _db
+        .collection('users')
+        .doc(_uid)
+        .collection('daily_summaries')
+        .doc(id);
     final doc = await ref.get();
 
     if (doc.exists) {
       await ref.update({
-        'totalCaloriesBurned':
-            FieldValue.increment(log.caloriesBurned),
+        'totalCaloriesBurned': FieldValue.increment(log.caloriesBurned),
         'totalActiveMinutes': FieldValue.increment(log.durationMinutes),
         'workoutCount': FieldValue.increment(1),
         'totalSteps': FieldValue.increment(log.steps ?? 0),
@@ -153,22 +176,40 @@ class FirestoreService {
     Map<String, dynamic> fields,
   ) async {
     final id = _summaryId(date);
-    final ref = _db.collection('daily_summaries').doc(id);
+    final ref = _db
+        .collection('users')
+        .doc(_uid)
+        .collection('daily_summaries')
+        .doc(id);
     final doc = await ref.get();
     if (doc.exists) {
-      await ref.update(fields);
+      // Doc exists — update() supports FieldValue.increment
+      if (fields.isNotEmpty) await ref.update(fields);
     } else {
+      // Doc doesn't exist — create it with defaults, then apply fields via update
+      // so FieldValue.increment works correctly even on first write
       await ref.set({
         'userId': _uid,
         'date': Timestamp.fromDate(date),
-        ...fields,
-      }, SetOptions(merge: true));
+        'totalCaloriesBurned': 0.0,
+        'totalActiveMinutes': 0,
+        'workoutCount': 0,
+        'totalSteps': 0,
+        'totalDistanceKm': 0.0,
+        'waterIntakeLiters': 0.0,
+        'sleepHours': 0.0,
+        'moodScore': 3,
+      });
+      // Now apply the incoming fields (may contain FieldValue sentinels)
+      if (fields.isNotEmpty) await ref.update(fields);
     }
   }
 
   Stream<DailySummary?> dailySummaryStream(DateTime date) {
     final id = _summaryId(date);
     return _db
+        .collection('users')
+        .doc(_uid)
         .collection('daily_summaries')
         .doc(id)
         .snapshots()
@@ -178,8 +219,9 @@ class FirestoreService {
   Stream<List<DailySummary>> weeklySummariesStream() {
     final start = DateTime.now().subtract(const Duration(days: 7));
     return _db
+        .collection('users')
+        .doc(_uid)
         .collection('daily_summaries')
-        .where('userId', isEqualTo: _uid)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
         .orderBy('date', descending: false)
         .snapshots()
@@ -187,29 +229,26 @@ class FirestoreService {
   }
 
   // ── Goals ─────────────────────────────────────────────────────────────────────
-  Future<void> addGoal(FitnessGoal goal) =>
-      _db
-          .collection('users')
-          .doc(_uid)
-          .collection('goals')
-          .doc(goal.id)
-          .set(goal.toFirestore());
+  Future<void> addGoal(FitnessGoal goal) => _db
+      .collection('users')
+      .doc(_uid)
+      .collection('goals')
+      .doc(goal.id)
+      .set(goal.toFirestore());
 
-  Future<void> updateGoal(String goalId, Map<String, dynamic> fields) =>
-      _db
-          .collection('users')
-          .doc(_uid)
-          .collection('goals')
-          .doc(goalId)
-          .update(fields);
+  Future<void> updateGoal(String goalId, Map<String, dynamic> fields) => _db
+      .collection('users')
+      .doc(_uid)
+      .collection('goals')
+      .doc(goalId)
+      .update(fields);
 
-  Future<void> deleteGoal(String goalId) =>
-      _db
-          .collection('users')
-          .doc(_uid)
-          .collection('goals')
-          .doc(goalId)
-          .delete();
+  Future<void> deleteGoal(String goalId) => _db
+      .collection('users')
+      .doc(_uid)
+      .collection('goals')
+      .doc(goalId)
+      .delete();
 
   Stream<List<FitnessGoal>> goalsStream() => _db
       .collection('users')
@@ -219,7 +258,7 @@ class FirestoreService {
       .snapshots()
       .map((s) => s.docs.map(FitnessGoal.fromFirestore).toList());
 
-  // ── Achievements (Advanced) ───────────────────────────────────────────────────
+  // ── Achievements ──────────────────────────────────────────────────────────────
   Stream<List<Achievement>> achievementsStream() => _db
       .collection('users')
       .doc(_uid)
@@ -228,34 +267,10 @@ class FirestoreService {
       .snapshots()
       .map((s) => s.docs.map(Achievement.fromFirestore).toList());
 
-  Future<void> unlockAchievement(Achievement a) =>
-      _db
-          .collection('users')
-          .doc(_uid)
-          .collection('achievements')
-          .doc(a.id)
-          .set(a.toFirestore());
-
-  // ── Analytics helpers (Advanced) ─────────────────────────────────────────────
-  Future<Map<String, double>> getWeeklyCalorieTrend() async {
-    final docs = await _db
-        .collection('daily_summaries')
-        .where('userId', isEqualTo: _uid)
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(
-            DateTime.now().subtract(const Duration(days: 7)),
-          ),
-        )
-        .orderBy('date')
-        .get();
-    return {
-      for (final d in docs.docs)
-        (d['date'] as Timestamp)
-                .toDate()
-                .weekday
-                .toString():
-            (d['totalCaloriesBurned'] ?? 0).toDouble()
-    };
-  }
+  Future<void> unlockAchievement(Achievement a) => _db
+      .collection('users')
+      .doc(_uid)
+      .collection('achievements')
+      .doc(a.id)
+      .set(a.toFirestore());
 }

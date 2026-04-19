@@ -27,11 +27,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _errorMsg = null; });
+    setState(() {
+      _loading = true;
+      _errorMsg = null;
+    });
     try {
-      await AuthService().signInWithEmail(_emailCtrl.text.trim(), _passCtrl.text);
+      await AuthService()
+          .signInWithEmail(_emailCtrl.text.trim(), _passCtrl.text);
     } on FirebaseAuthException catch (e) {
       setState(() => _errorMsg = _friendlyError(e.code));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _errorMsg = null;
+    });
+    try {
+      await AuthService().signInWithGoogle();
+    } on FirebaseAuthException catch (e) {
+      setState(() => _errorMsg = _friendlyError(e.code));
+    } catch (e) {
+      setState(() => _errorMsg = 'Sign-in with Google failed');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -42,10 +62,14 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'user-not-found':
       case 'invalid-credential':
         return 'Email or password is incorrect.';
-      case 'wrong-password': return 'Incorrect password. Please try again.';
-      case 'invalid-email': return 'Please enter a valid email address.';
-      case 'too-many-requests': return 'Too many attempts. Try again later.';
-      default: return 'Sign in failed. Please try again.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try again later.';
+      default:
+        return 'Sign in failed. Please try again.';
     }
   }
 
@@ -64,28 +88,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 48),
                 Center(
                   child: Container(
-                    width: 56, height: 56,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
                       gradient: AppColors.kineticGradient,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.bolt_rounded, color: AppColors.onPrimary, size: 30),
+                    child: const Icon(Icons.bolt_rounded,
+                        color: AppColors.onPrimary, size: 30),
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Center(child: Text('FitTrack', style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans', fontSize: 17,
-                  fontWeight: FontWeight.w700, color: AppColors.onSurface,
-                ))),
+                const Center(
+                    child: Text('FitTrack',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ))),
                 const SizedBox(height: 40),
-                const Text('Welcome back', style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans', fontSize: 28,
-                  fontWeight: FontWeight.w800, color: AppColors.onSurface,
-                )),
+                const Text('Welcome back',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.onSurface,
+                    )),
                 const SizedBox(height: 4),
-                const Text('Sign in to continue', style: TextStyle(
-                  fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant,
-                )),
+                const Text('Sign in to continue',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      color: AppColors.onSurfaceVariant,
+                    )),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailCtrl,
@@ -94,10 +130,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     hintText: 'you@example.com',
-                    prefixIcon: Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
+                    prefixIcon: Icon(Icons.email_outlined,
+                        color: AppColors.onSurfaceVariant),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!v.contains('@')) return 'Enter a valid email';
                     return null;
                   },
@@ -111,9 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.onSurfaceVariant),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded,
+                        color: AppColors.onSurfaceVariant),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      icon: Icon(
+                          _obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppColors.outlineVariant),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
@@ -128,9 +171,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => _showForgotPassword(context),
-                    child: const Text('Forgot password?', style: TextStyle(
-                      fontFamily: 'Inter', fontSize: 13, color: AppColors.primary,
-                    )),
+                    child: const Text('Forgot password?',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          color: AppColors.primary,
+                        )),
                   ),
                 ),
                 if (_errorMsg != null) ...[
@@ -138,21 +184,66 @@ class _LoginScreenState extends State<LoginScreen> {
                   _ErrorBanner(message: _errorMsg!),
                 ],
                 const SizedBox(height: 24),
-                KineticButton(label: 'Sign In', onPressed: _loading ? null : _login, isLoading: _loading),
+                KineticButton(
+                    label: 'Sign In',
+                    onPressed: _loading ? null : _login,
+                    isLoading: _loading),
+                const SizedBox(height: 16),
+                // Google Sign-In Button
+                GestureDetector(
+                  onTap: _loading ? null : _loginWithGoogle,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(100),
+                      border: Border.all(
+                        color: AppColors.outline.withOpacity(0.5),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.login, color: AppColors.primary, size: 20),
+                        SizedBox(width: 12),
+                        Text(
+                          'Continue with Google',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 28),
-                Center(child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                Center(
+                    child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
                   children: [
-                    const Text("Don't have an account? ", style: TextStyle(
-                      fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant,
-                    )),
+                    const Text("Don't have an account? ",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: AppColors.onSurfaceVariant,
+                        )),
                     GestureDetector(
                       onTap: () => Navigator.pushReplacement(
-                        context, MaterialPageRoute(builder: (_) => const SignUpScreen())),
-                      child: const Text('Sign Up', style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans', fontSize: 14,
-                        fontWeight: FontWeight.w700, color: AppColors.primary,
-                      )),
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const SignUpScreen())),
+                      child: const Text('Sign Up',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
                     ),
                   ],
                 )),
@@ -175,20 +266,29 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(left: 28, right: 28, top: 28,
+        padding: EdgeInsets.only(
+            left: 28,
+            right: 28,
+            top: 28,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Reset Password', style: TextStyle(
-              fontFamily: 'Plus Jakarta Sans', fontSize: 20,
-              fontWeight: FontWeight.w700, color: AppColors.onSurface,
-            )),
+            const Text('Reset Password',
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurface,
+                )),
             const SizedBox(height: 6),
-            const Text("We'll email you a reset link.", style: TextStyle(
-              fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant,
-            )),
+            const Text("We'll email you a reset link.",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: AppColors.onSurfaceVariant,
+                )),
             const SizedBox(height: 20),
             TextField(
               controller: ctrl,
@@ -247,20 +347,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _errorMsg = null; });
+    setState(() {
+      _loading = true;
+      _errorMsg = null;
+    });
     try {
       await AuthService().signUpWithEmail(
-        _emailCtrl.text.trim(), _passCtrl.text, _nameCtrl.text.trim(),
+        _emailCtrl.text.trim(),
+        _passCtrl.text,
+        _nameCtrl.text.trim(),
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
         switch (e.code) {
           case 'email-already-in-use':
-            _errorMsg = 'An account already exists with this email.'; break;
+            _errorMsg = 'An account already exists with this email.';
+            break;
           case 'weak-password':
-            _errorMsg = 'Password too weak. Use at least 8 characters.'; break;
+            _errorMsg = 'Password too weak. Use at least 8 characters.';
+            break;
           case 'invalid-email':
-            _errorMsg = 'Please enter a valid email address.'; break;
+            _errorMsg = 'Please enter a valid email address.';
+            break;
           default:
             _errorMsg = 'Sign up failed. Please try again.';
         }
@@ -284,20 +392,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [
                 const SizedBox(height: 24),
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
+                  icon: const Icon(Icons.arrow_back_rounded,
+                      color: AppColors.onSurface),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
                 const SizedBox(height: 24),
-                const Text('Create account', style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans', fontSize: 28,
-                  fontWeight: FontWeight.w800, color: AppColors.onSurface,
-                )),
+                const Text('Create account',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.onSurface,
+                    )),
                 const SizedBox(height: 4),
-                const Text('Start your fitness journey', style: TextStyle(
-                  fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant,
-                )),
+                const Text('Start your fitness journey',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      color: AppColors.onSurfaceVariant,
+                    )),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _nameCtrl,
@@ -305,10 +420,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'Full name',
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppColors.onSurfaceVariant),
+                    prefixIcon: Icon(Icons.person_outline_rounded,
+                        color: AppColors.onSurfaceVariant),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Name is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Name is required';
+                    }
                     if (v.trim().length < 2) return 'Name too short';
                     return null;
                   },
@@ -321,10 +439,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     hintText: 'you@example.com',
-                    prefixIcon: Icon(Icons.email_outlined, color: AppColors.onSurfaceVariant),
+                    prefixIcon: Icon(Icons.email_outlined,
+                        color: AppColors.onSurfaceVariant),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v.trim())) {
                       return 'Enter a valid email address';
                     }
@@ -340,9 +461,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     hintText: 'Min 8 characters',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.onSurfaceVariant),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded,
+                        color: AppColors.onSurfaceVariant),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      icon: Icon(
+                          _obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppColors.outlineVariant),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
@@ -358,21 +483,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   _ErrorBanner(message: _errorMsg!),
                 ],
                 const SizedBox(height: 28),
-                KineticButton(label: 'Create Account', onPressed: _loading ? null : _signUp, isLoading: _loading),
+                KineticButton(
+                    label: 'Create Account',
+                    onPressed: _loading ? null : _signUp,
+                    isLoading: _loading),
                 const SizedBox(height: 28),
-                Center(child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                Center(
+                    child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
                   children: [
-                    const Text('Already have an account? ', style: TextStyle(
-                      fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant,
-                    )),
+                    const Text('Already have an account? ',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: AppColors.onSurfaceVariant,
+                        )),
                     GestureDetector(
                       onTap: () => Navigator.pushReplacement(
-                        context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-                      child: const Text('Sign In', style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans', fontSize: 14,
-                        fontWeight: FontWeight.w700, color: AppColors.primary,
-                      )),
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen())),
+                      child: const Text('Sign In',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          )),
                     ),
                   ],
                 )),
@@ -401,11 +539,16 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+          const Icon(Icons.error_outline_rounded,
+              color: AppColors.error, size: 18),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: const TextStyle(
-            fontFamily: 'Inter', fontSize: 13, color: AppColors.error,
-          ))),
+          Expanded(
+              child: Text(message,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: AppColors.error,
+                  ))),
         ],
       ),
     );

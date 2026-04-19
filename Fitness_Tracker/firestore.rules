@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: is the request from a signed-in user? ──────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // ── Helper: is the signed-in user the owner of this document? ──────────────
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // ── User profiles ──────────────────────────────────────────────────────────
+    // /users/{uid}
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      // ── Workouts subcollection ─────────────────────────────────────────────
+      // /users/{uid}/workouts/{workoutId}
+      match /workouts/{workoutId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ── Daily summaries subcollection ──────────────────────────────────────
+      // /users/{uid}/daily_summaries/{summaryId}
+      match /daily_summaries/{summaryId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ── Goals subcollection ────────────────────────────────────────────────
+      // /users/{uid}/goals/{goalId}
+      match /goals/{goalId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ── Achievements subcollection ─────────────────────────────────────────
+      // /users/{uid}/achievements/{achievementId}
+      match /achievements/{achievementId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Deny everything else ───────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

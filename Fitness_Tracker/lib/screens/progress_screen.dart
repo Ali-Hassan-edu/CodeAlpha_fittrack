@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
 import '../models/models.dart';
@@ -37,19 +38,19 @@ class _ProgressScreenState extends State<ProgressScreen>
           SliverAppBar(
             pinned: true,
             backgroundColor: AppColors.surface.withOpacity(0.85),
-            title: const Text('Progress & Goals', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700)),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add_rounded, color: AppColors.primary),
-                onPressed: () => _showAddGoalSheet(context),
-              ),
-            ],
+            title: const Text('Progress & Goals',
+                style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w700)),
             bottom: TabBar(
               controller: _tabCtrl,
               indicatorColor: AppColors.primary,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.onSurfaceVariant,
-              labelStyle: const TextStyle(fontFamily: 'Lexend', fontWeight: FontWeight.w700, fontSize: 12),
+              labelStyle: const TextStyle(
+                  fontFamily: 'Lexend',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12),
               tabs: const [Tab(text: 'ANALYTICS'), Tab(text: 'GOALS')],
             ),
           ),
@@ -64,6 +65,14 @@ class _ProgressScreenState extends State<ProgressScreen>
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddGoalSheet(context),
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child:
+            const Icon(Icons.add_rounded, size: 28, color: AppColors.onPrimary),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -90,6 +99,7 @@ class _AnalyticsTab extends StatelessWidget {
     return StreamBuilder<List<DailySummary>>(
       stream: service.weeklySummariesStream(),
       builder: (context, snap) {
+        // Silently ignore errors - show empty state
         final summaries = snap.data ?? [];
         final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -101,7 +111,7 @@ class _AnalyticsTab extends StatelessWidget {
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -109,11 +119,16 @@ class _AnalyticsTab extends StatelessWidget {
               // Summary chips
               Row(
                 children: [
-                  _SummaryChip(label: 'TOTAL CAL', value: totalCals.toInt().toString()),
+                  _SummaryChip(
+                      label: 'TOTAL CAL', value: totalCals.toInt().toString()),
                   const SizedBox(width: 10),
-                  _SummaryChip(label: 'TOTAL STEPS', value: '${(totalSteps / 1000).toStringAsFixed(1)}K'),
+                  _SummaryChip(
+                      label: 'TOTAL STEPS',
+                      value: '${(totalSteps / 1000).toStringAsFixed(1)}K'),
                   const SizedBox(width: 10),
-                  _SummaryChip(label: 'ACTIVE MINS', value: totalMins.toInt().toString()),
+                  _SummaryChip(
+                      label: 'ACTIVE MINS',
+                      value: totalMins.toInt().toString()),
                 ],
               ),
               const SizedBox(height: 24),
@@ -126,12 +141,20 @@ class _AnalyticsTab extends StatelessWidget {
                   child: WeeklyBarChart(
                     values: List.generate(7, (i) {
                       try {
-                        return summaries.firstWhere((s) => s.date.weekday == i + 1).totalCaloriesBurned;
-                      } catch (_) { return 0.0; }
+                        return summaries
+                            .firstWhere((s) => s.date.weekday == i + 1)
+                            .totalCaloriesBurned;
+                      } catch (_) {
+                        return 0.0;
+                      }
                     }),
                     labels: days,
                     selectedIndex: DateTime.now().weekday - 1,
-                    maxValue: summaries.isEmpty ? 1 : summaries.map((s) => s.totalCaloriesBurned).reduce((a, b) => a > b ? a : b),
+                    maxValue: summaries.isEmpty
+                        ? 1
+                        : summaries
+                            .map((s) => s.totalCaloriesBurned)
+                            .reduce((a, b) => a > b ? a : b),
                   ),
                 ),
               ),
@@ -145,12 +168,21 @@ class _AnalyticsTab extends StatelessWidget {
                   child: WeeklyBarChart(
                     values: List.generate(7, (i) {
                       try {
-                        return summaries.firstWhere((s) => s.date.weekday == i + 1).totalSteps.toDouble();
-                      } catch (_) { return 0.0; }
+                        return summaries
+                            .firstWhere((s) => s.date.weekday == i + 1)
+                            .totalSteps
+                            .toDouble();
+                      } catch (_) {
+                        return 0.0;
+                      }
                     }),
                     labels: days,
                     selectedIndex: DateTime.now().weekday - 1,
-                    maxValue: summaries.isEmpty ? 1 : summaries.map((s) => s.totalSteps.toDouble()).reduce((a, b) => a > b ? a : b),
+                    maxValue: summaries.isEmpty
+                        ? 1
+                        : summaries
+                            .map((s) => s.totalSteps.toDouble())
+                            .reduce((a, b) => a > b ? a : b),
                   ),
                 ),
               ),
@@ -167,15 +199,22 @@ class _AnalyticsTab extends StatelessWidget {
                     children: List.generate(7, (i) {
                       int mood = 3;
                       try {
-                        mood = summaries.firstWhere((s) => s.date.weekday == i + 1).moodScore;
+                        mood = summaries
+                            .firstWhere((s) => s.date.weekday == i + 1)
+                            .moodScore;
                       } catch (_) {}
                       final emojis = ['', '😞', '😕', '😐', '🙂', '😄'];
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(emojis[mood.clamp(1, 5)], style: const TextStyle(fontSize: 22)),
+                          Text(emojis[mood.clamp(1, 5)],
+                              style: const TextStyle(fontSize: 22)),
                           const SizedBox(height: 4),
-                          Text(days[i], style: const TextStyle(fontFamily: 'Lexend', fontSize: 9, color: AppColors.onSurfaceVariant)),
+                          Text(days[i],
+                              style: const TextStyle(
+                                  fontFamily: 'Lexend',
+                                  fontSize: 9,
+                                  color: AppColors.onSurfaceVariant)),
                         ],
                       );
                     }),
@@ -193,16 +232,24 @@ class _AnalyticsTab extends StatelessWidget {
                   if (achievements.isEmpty) {
                     return Container(
                       padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(20)),
                       child: const Center(
-                        child: Text('Complete goals to unlock badges! 🏆', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.onSurfaceVariant)),
+                        child: Text('Complete goals to unlock badges! 🏆',
+                            style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: AppColors.onSurfaceVariant)),
                       ),
                     );
                   }
                   return Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: achievements.map((a) => _AchievementBadge(achievement: a)).toList(),
+                    children: achievements
+                        .map((a) => _AchievementBadge(achievement: a))
+                        .toList(),
                   );
                 },
               ),
@@ -225,6 +272,7 @@ class _GoalsTab extends StatelessWidget {
     return StreamBuilder<List<FitnessGoal>>(
       stream: service.goalsStream(),
       builder: (context, snap) {
+        // Silently ignore errors - show empty state
         final goals = snap.data ?? [];
         if (goals.isEmpty) {
           return const Center(
@@ -233,15 +281,24 @@ class _GoalsTab extends StatelessWidget {
               children: [
                 Text('🎯', style: TextStyle(fontSize: 56)),
                 SizedBox(height: 16),
-                Text('No goals yet', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+                Text('No goals yet',
+                    style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.onSurface)),
                 SizedBox(height: 8),
-                Text('Tap + to add your first goal', style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.onSurfaceVariant)),
+                Text('Tap + to add your first goal',
+                    style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: AppColors.onSurfaceVariant)),
               ],
             ),
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           itemCount: goals.length,
           itemBuilder: (_, i) => _GoalCard(goal: goals[i], service: service),
         );
@@ -266,7 +323,9 @@ class _GoalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
-        border: isCompleted ? Border.all(color: AppColors.primaryContainer, width: 2) : null,
+        border: isCompleted
+            ? Border.all(color: AppColors.primaryContainer, width: 2)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,11 +336,21 @@ class _GoalCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(goal.title, style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.onSurface)),
+                    Text(goal.title,
+                        style: const TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: AppColors.onSurface)),
                     const SizedBox(height: 4),
                     Text(
                       isCompleted ? '🏆 Completed!' : '$daysLeft days left',
-                      style: TextStyle(fontFamily: 'Lexend', fontSize: 11, color: isCompleted ? AppColors.primary : AppColors.onSurfaceVariant),
+                      style: TextStyle(
+                          fontFamily: 'Lexend',
+                          fontSize: 11,
+                          color: isCompleted
+                              ? AppColors.primary
+                              : AppColors.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -292,7 +361,11 @@ class _GoalCard extends StatelessWidget {
                 strokeWidth: 6,
                 child: Text(
                   '${(goal.progressPercent * 100).toInt()}%',
-                  style: const TextStyle(fontFamily: 'Lexend', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                  style: const TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary),
                 ),
               ),
             ],
@@ -300,12 +373,16 @@ class _GoalCard extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             height: 8,
-            decoration: BoxDecoration(color: AppColors.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
+            decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(4)),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
               widthFactor: goal.progressPercent,
               child: Container(
-                decoration: BoxDecoration(gradient: AppColors.kineticGradient, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                    gradient: AppColors.kineticGradient,
+                    borderRadius: BorderRadius.circular(4)),
               ),
             ),
           ),
@@ -313,11 +390,16 @@ class _GoalCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${goal.currentValue.toInt()} / ${goal.targetValue.toInt()} ${_unit(goal.type)}',
-                  style: const TextStyle(fontFamily: 'Lexend', fontSize: 11, color: AppColors.onSurfaceVariant)),
+              Text(
+                  '${goal.currentValue.toInt()} / ${goal.targetValue.toInt()} ${_unit(goal.type)}',
+                  style: const TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 11,
+                      color: AppColors.onSurfaceVariant)),
               GestureDetector(
                 onTap: () => service.deleteGoal(goal.id),
-                child: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.outlineVariant),
+                child: const Icon(Icons.delete_outline_rounded,
+                    size: 18, color: AppColors.outlineVariant),
               ),
             ],
           ),
@@ -328,11 +410,16 @@ class _GoalCard extends StatelessWidget {
 
   String _unit(String type) {
     switch (type) {
-      case 'steps': return 'steps';
-      case 'calories': return 'kcal';
-      case 'weight': return 'kg';
-      case 'distance': return 'km';
-      default: return '';
+      case 'steps':
+        return 'steps';
+      case 'calories':
+        return 'kcal';
+      case 'weight':
+        return 'kg';
+      case 'distance':
+        return 'km';
+      default:
+        return '';
     }
   }
 }
@@ -356,31 +443,48 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('New Goal', style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.onSurface)),
+          const Text('New Goal',
+              style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface)),
           const SizedBox(height: 20),
-          TextField(controller: _titleCtrl, decoration: const InputDecoration(hintText: 'Goal name, e.g. "Run 100km"')),
+          TextField(
+              controller: _titleCtrl,
+              decoration: const InputDecoration(
+                  hintText: 'Goal name, e.g. "Run 100km"')),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _type,
+            initialValue: _type,
             decoration: const InputDecoration(),
             items: const [
               DropdownMenuItem(value: 'steps', child: Text('Steps')),
               DropdownMenuItem(value: 'calories', child: Text('Calories')),
               DropdownMenuItem(value: 'distance', child: Text('Distance (km)')),
-              DropdownMenuItem(value: 'workout_count', child: Text('Workout Sessions')),
+              DropdownMenuItem(
+                  value: 'workout_count', child: Text('Workout Sessions')),
               DropdownMenuItem(value: 'weight', child: Text('Weight (kg)')),
             ],
             onChanged: (v) => setState(() => _type = v!),
           ),
           const SizedBox(height: 16),
-          const Text('TARGET', style: TextStyle(fontFamily: 'Lexend', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.onSurfaceVariant, letterSpacing: 1.2)),
+          const Text('TARGET',
+              style: TextStyle(
+                  fontFamily: 'Lexend',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurfaceVariant,
+                  letterSpacing: 1.2)),
           Slider(
             value: _target,
             min: 100,
@@ -390,15 +494,26 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
             onChanged: (v) => setState(() => _target = v),
             label: _target.toInt().toString(),
           ),
-          Text('${_target.toInt()} $_type', style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.primary)),
+          Text('${_target.toInt()} $_type',
+              style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppColors.primary)),
           const SizedBox(height: 24),
           KineticButton(
             label: 'Save Goal',
             onPressed: () {
+              if (_titleCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a goal name')),
+                );
+                return;
+              }
               final goal = FitnessGoal(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
-                userId: '',
-                title: _titleCtrl.text.isEmpty ? 'My Goal' : _titleCtrl.text,
+                userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                title: _titleCtrl.text,
                 type: _type,
                 targetValue: _target,
                 startDate: DateTime.now(),
@@ -406,6 +521,13 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
               );
               widget.service.addGoal(goal);
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Goal saved!'),
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -420,7 +542,13 @@ class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
   @override
-  Widget build(BuildContext context) => Text(text, style: const TextStyle(fontFamily: 'Lexend', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.onSurfaceVariant, letterSpacing: 1.2));
+  Widget build(BuildContext context) => Text(text,
+      style: const TextStyle(
+          fontFamily: 'Lexend',
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurfaceVariant,
+          letterSpacing: 1.2));
 }
 
 class _SummaryChip extends StatelessWidget {
@@ -431,11 +559,24 @@ class _SummaryChip extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(14)),
           child: Column(
             children: [
-              Text(value, style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.onSurface)),
-              Text(label, style: const TextStyle(fontFamily: 'Lexend', fontSize: 8, color: AppColors.onSurfaceVariant, letterSpacing: 0.8), textAlign: TextAlign.center),
+              Text(value,
+                  style: const TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      color: AppColors.onSurface)),
+              Text(label,
+                  style: const TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 8,
+                      color: AppColors.onSurfaceVariant,
+                      letterSpacing: 0.8),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -446,16 +587,28 @@ class _ChartCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget child;
-  const _ChartCard({required this.title, required this.subtitle, required this.child});
+  const _ChartCard(
+      {required this.title, required this.subtitle, required this.child});
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(24)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.onSurface)),
-            Text(subtitle, style: const TextStyle(fontFamily: 'Lexend', fontSize: 10, color: AppColors.onSurfaceVariant)),
+            Text(title,
+                style: const TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: AppColors.onSurface)),
+            Text(subtitle,
+                style: const TextStyle(
+                    fontFamily: 'Lexend',
+                    fontSize: 10,
+                    color: AppColors.onSurfaceVariant)),
             const SizedBox(height: 20),
             child,
           ],
@@ -476,9 +629,15 @@ class _AchievementBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.emoji_events_rounded, color: AppColors.onPrimary, size: 18),
+            const Icon(Icons.emoji_events_rounded,
+                color: AppColors.onPrimary, size: 18),
             const SizedBox(width: 8),
-            Text(achievement.title, style: const TextStyle(fontFamily: 'Lexend', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.onPrimary)),
+            Text(achievement.title,
+                style: const TextStyle(
+                    fontFamily: 'Lexend',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onPrimary)),
           ],
         ),
       );
